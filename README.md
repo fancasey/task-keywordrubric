@@ -19,6 +19,12 @@ Teacher means come from the mean-score workbook. The question workbook supplies 
 | `grade_answers` | Apply one keyword rubric to all five answers and return a score for each student and dimension. |
 | `pin_teacher_grades` | Supply the question data and unrounded teacher means as the private verifier reference. |
 
+### Tasks
+
+| Task | Purpose |
+| --- | --- |
+| `grade-question` | Build a keyword rubric and grade all five answers for NQ004, NQ007, NQ008, or NQ009. The verifier compares the grades with the pinned teacher means. |
+
 ## Layout
 
 - `nanoagent.yaml` defines the plugin, tools, and grading task. `contract.py` defines their data types.
