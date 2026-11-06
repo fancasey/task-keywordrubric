@@ -11,9 +11,26 @@ For example, ask “Build a keyword rubric and grade the five answers for NQ007.
 
 Teacher means come from the mean-score workbook. The question workbook supplies the text and criteria, and the CSV is a dataset export that includes rounded scores. The question tool exposes only ungraded materials. Since the agent can use the answers to build the rubric, the result measures agreement on those answers.
 
-## Development
+## Tools
+
+| Tool | Purpose |
+| --- | --- |
+| `get_question` | Return the question, model answer, teacher criteria, and five ungraded student answers. |
+| `grade_answers` | Apply one keyword rubric to all five answers and return a score for each student and dimension. |
+| `pin_teacher_grades` | Supply the question data and unrounded teacher means as the private verifier reference. |
+
+## Layout
+
+- `nanoagent.yaml` defines the plugin, tools, and grading task. `contract.py` defines their data types.
+- `src/plugin/` contains the MCP server, tool implementations, and dataset.
+- `verifier/` contains the rubric scoring and verification logic. `tests/test_verifier.py` exercises both.
+- `product/` and `ui/` contain the product definition and display assets.
+
+## Develop and run
 
 ```sh
 uv sync --extra dev
 uv run pytest
 ```
+
+NanoAgent launches the MCP server with `uv run --frozen python -m plugin` and sets `NANOAGENT_WORKSPACE` to the plugin's writable workspace.

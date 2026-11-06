@@ -1,3 +1,5 @@
+"""Exercise the verifier with rubric inputs and grading tool results."""
+
 from dataclasses import replace
 
 import pytest
