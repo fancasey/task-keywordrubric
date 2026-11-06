@@ -1,0 +1,11 @@
+_ > nanoagent.plugin.v0001.ProductConfig:
+tagline: Build keyword rubrics and compare the grades with teachers
+summary: The agent reads a data structures question and five student answers, builds a keyword rubric, and grades each answer against the teacher's criteria.
+highlights:
+  - Four data structures questions with real graded answers
+  - One shared rubric for every student answering a question
+  - Deterministic grading and comparison with the mean of five evaluators
+steps:
+  - Pick NQ004, NQ007, NQ008, or NQ009
+  - The agent builds and applies the rubric
+  - See the grades and their agreement with the teacher reference
