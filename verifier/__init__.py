@@ -4,8 +4,8 @@ from math import isfinite
 from statistics import mean
 
 from contract import GradeAnswersOutput, Task, Tool
-from plugin.questions import get_student_response, list_students
 
+from .questions import get_student_response, list_students
 from .scoring import grade_answers, rubric_problem, score_answers
 
 DIMENSION_IDS = ("D1", "D2", "D3", "D4", "D5")

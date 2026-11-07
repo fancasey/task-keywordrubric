@@ -25,6 +25,35 @@ def rubric():
     return [EvidenceGroup([PhraseAlternative([word], [])]) for word in ("stack", "queue", "heap", "DFS")]
 
 
+def test_verifier_loads_without_plugin_implementation(tmp_path):
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    script = """
+import sys
+sys.path.insert(0, sys.argv[1])
+class NoPlugin:
+    def find_spec(self, fullname, path=None, target=None):
+        if fullname == 'plugin' or fullname.startswith('plugin.'):
+            raise ImportError('plugin implementation is unavailable to the verifier')
+sys.meta_path.insert(0, NoPlugin())
+from contract import QuestionID, QuestionInput, StudentResponseInput
+from verifier import verify_output
+from verifier.questions import get_student_response, list_students
+for question_id in QuestionID:
+    request = QuestionInput(question_id)
+    students = list_students(request, None)
+    assert verify_output('list_students', request, students, None)['valid']
+    for student_id in students.student_ids:
+        lookup = StudentResponseInput(question_id, student_id)
+        response = get_student_response(lookup, None)
+        assert verify_output('get_student_response', lookup, response, None)['valid']
+"""
+    subprocess.run([sys.executable, "-I", "-c", script, str(root)], cwd=tmp_path, check=True)
+
+
 @pytest.mark.parametrize("question_id", list(QuestionID))
 def test_overall_comparison(question_id, tmp_path):
     request = QuestionInput(question_id)

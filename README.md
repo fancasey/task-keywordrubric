@@ -45,7 +45,7 @@ The rubric allows 1–20 groups. Each group allows 1–20 alternatives, with phr
 
 Call `grade_answers` with `question_id`, the complete `rubric` (same format as the task output), and `answers` as a list of `{ "student_id": "S1", "text": "..." }` objects. It validates the keyword groups and rejects duplicate or blank student IDs. Empty answer text earns 1. It returns `question_id` and `grades`, each containing `student_id` and the overall `score`. It does not load private student answers or teacher grades.
 
-Use this tool for all grading; do not assign grades by hand. The verifier also calls this tool's implementation for dataset submissions.
+Use this tool for all grading; do not assign grades by hand. The verifier independently replays the scoring rules for dataset submissions.
 
 ### Tasks
 
@@ -67,6 +67,7 @@ The rubric-generation agent can call `list_students` and `get_student_response` 
 - `nanoagent.yaml` defines the plugin, tools, and grading task. `contract.py` defines their data types.
 - `src/plugin/` contains the MCP server, tool implementations, and dataset.
 - `verifier/` contains the rubric scoring and verification logic. `tests/test_verifier.py` exercises both.
+- `verifier/student_answers.json` is the verifier's independent lookup reference. Keep it in sync with the bundled dataset when responses change; the lookup tests compare every response.
 - `product/` and `ui/` contain the product definition and display assets.
 
 ## Develop and run
