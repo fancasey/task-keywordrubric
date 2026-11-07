@@ -9,12 +9,11 @@ from slimconfig import Output
 
 class Tool(Enum):
     GET_QUESTION = "get_question"
-    GRADE_ANSWERS = "grade_answers"
     PIN_TEACHER_GRADES = "pin_teacher_grades"
 
 
 class Task(Enum):
-    GRADE_QUESTION = "grade-question"
+    GENERATE_RUBRIC = "generate-rubric"
 
 
 class QuestionID(Enum):
@@ -26,7 +25,7 @@ class QuestionID(Enum):
 
 @dataclass
 class QuestionInput(Output):
-    question_id: Annotated[QuestionID, "Dataset question to grade"]
+    question_id: Annotated[QuestionID, "Dataset question for the rubric"]
 
 
 @dataclass
@@ -43,18 +42,29 @@ class Dimension(Output):
 
 
 @dataclass
-class QuestionOutput(Output):
+class QuestionContextOutput(Output):
     question_id: QuestionID
     question: str
     model_answer: str
     dimensions: list[Dimension]
+
+
+@dataclass
+class QuestionOutput(QuestionContextOutput):
     answers: list[StudentAnswer]
+
+
+@dataclass
+class PhraseAlternative(Output):
+    all_of: Annotated[list[str], "Every listed literal phrase must occur in the answer."]
+    none_of: Annotated[list[str], "No listed literal phrase may occur in the answer."]
 
 
 @dataclass
 class EvidenceGroup(Output):
     alternatives: Annotated[
-        list[list[str]], "Any alternative qualifies. Each alternative requires every listed phrase."
+        list[PhraseAlternative],
+        "Any alternative qualifies when all its required phrases occur and no excluded phrase occurs.",
     ]
 
 
@@ -67,7 +77,7 @@ class DimensionRubric(Output):
 
 
 @dataclass
-class GradeInput(Output):
+class RubricOutput(Output):
     question_id: QuestionID
     rubric: list[DimensionRubric]
 
@@ -77,13 +87,6 @@ class Grade(Output):
     student_id: str
     dimension_id: str
     score: Annotated[int, "Keyword rubric score from 1 to 4"]
-
-
-@dataclass
-class GradeOutput(Output):
-    question_id: QuestionID
-    rubric: list[DimensionRubric]
-    grades: list[Grade]
 
 
 @dataclass
@@ -100,8 +103,7 @@ class ReferenceOutput(Output):
 
 
 TOOLS = {
-    Tool.GET_QUESTION: (QuestionInput, QuestionOutput),
-    Tool.GRADE_ANSWERS: (GradeInput, GradeOutput),
+    Tool.GET_QUESTION: (QuestionInput, QuestionContextOutput),
     Tool.PIN_TEACHER_GRADES: (QuestionInput, ReferenceOutput),
 }
-TASKS = {Task.GRADE_QUESTION: (QuestionInput, GradeOutput)}
+TASKS = {Task.GENERATE_RUBRIC: (QuestionInput, RubricOutput)}

@@ -1,29 +1,47 @@
 # Keyword Rubric Grader
 
-Ask NanoAgent to grade a dataset question using a keyword rubric. The plugin includes NQ004 (stacks in recursion), NQ007 (DFS and BFS), NQ008 (arrays and linked lists), and NQ009 (merge sort for records stored on disk).
+Ask NanoAgent to generate a deterministic keyword rubric for a dataset question. The plugin includes NQ004 (stacks in recursion), NQ007 (DFS and BFS), NQ008 (arrays and linked lists), and NQ009 (merge sort for records stored on disk).
 
-For example, ask “Build a keyword rubric and grade the five answers for NQ007.”
+For example, ask “Build a keyword rubric for NQ007.”
 
 1. NanoAgent pins the unrounded teacher means with the private reference tool.
-2. The agent reads the question, model answer, teacher criteria, and five ungraded student answers using `get_question`.
-3. The agent writes one rubric for the question and calls `grade_answers`. Each of the five dimensions starts at 1 and earns one point for each of three evidence groups. A group matches when any of its alternatives matches. An alternative requires all its literal words or phrases to appear. Matching ignores case, normalizes Unicode and whitespace, and uses word boundaries.
-4. The agent submits the grading result. The verifier checks that it came from the grading tool, replays the rubric on the pinned answers, and compares all 25 scores with the teacher means. The initial pass threshold is a mean absolute error of 0.75 points on the 1–4 scale. The verifier also reports the error by dimension and the best constant integer baseline for context.
+2. The agent reads the question, model answer, and teacher criteria using `get_question`. Only the verifier receives the private student responses.
+3. The agent submits one rubric for the question. Each of the five dimensions starts at 1 and earns one point for each of three evidence groups. A group matches when any of its alternatives matches. An alternative requires all its `all_of` literal words or phrases to appear and every `none_of` phrase to be absent. Exclusions apply only to their own alternative. Matching ignores case, normalizes Unicode and whitespace, and uses word boundaries.
+4. The verifier applies the submitted rubric to the pinned answers and compares all 25 scores with the teacher means. The initial pass threshold is a mean absolute error of 0.75 points on the 1–4 scale. The verifier also reports the error by dimension and the best constant integer baseline for context.
 
-Teacher means come from the mean-score workbook. The question workbook supplies the text and criteria, and the CSV is a dataset export that includes rounded scores. The question tool exposes only ungraded materials. Since the agent can use the answers to build the rubric, the result measures agreement on those answers.
+Teacher means come from the mean-score workbook. The question workbook supplies the text and criteria, and the CSV is a dataset export that includes rounded scores. The result measures agreement with teachers on responses the agent did not see while writing the rubric.
+
+## Phrase combinations
+
+Each alternative contains `all_of` (1–8 required phrases) and `none_of` (0–8 excluded phrases). Use an empty `none_of` list for a positive-only alternative. A group accepts any matching alternative and earns at most one point.
+
+For example, this evidence group accepts **"heap" OR ("stack" AND "queue" AND NOT "recursive")**:
+
+```json
+{
+  "alternatives": [
+    {"all_of": ["heap"], "none_of": []},
+    {"all_of": ["stack", "queue"], "none_of": ["recursive"]}
+  ]
+}
+```
+
+The answer "heap recursive" still qualifies through the first alternative. The answer "stack queue recursive" does not. Exclusions use the same literal matching and word boundaries as required phrases; they check the whole answer, not the meaning of a sentence.
+
+Each group allows 1–20 alternatives, with phrases of 1–100 normalized characters. Empty required lists, duplicate alternatives within a dimension, repeated phrases within a list, and phrases that are both required and excluded are rejected. Alternatives now use these explicit objects in place of the previous phrase lists.
 
 ## Tools
 
 | Tool | Purpose |
 | --- | --- |
-| `get_question` | Return the question, model answer, teacher criteria, and five ungraded student answers. |
-| `grade_answers` | Apply one keyword rubric to all five answers and return a score for each student and dimension. |
+| `get_question` | Return the question, model answer, and teacher criteria. |
 | `pin_teacher_grades` | Supply the question data and unrounded teacher means as the private verifier reference. |
 
 ### Tasks
 
 | Task | Purpose |
 | --- | --- |
-| `grade-question` | Build a keyword rubric and grade all five answers for NQ004, NQ007, NQ008, or NQ009. The verifier compares the grades with the pinned teacher means. |
+| `generate-rubric` | Generate a keyword rubric for NQ004, NQ007, NQ008, or NQ009. The verifier grades the private submissions and compares the grades with pinned teacher means. |
 
 ## Layout
 

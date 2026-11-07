@@ -4,7 +4,7 @@ from pathlib import Path
 from xml.etree import ElementTree
 from zipfile import ZipFile
 
-from contract import Dimension, QuestionOutput, ReferenceOutput, StudentAnswer, TeacherGrade
+from contract import Dimension, QuestionContextOutput, QuestionOutput, ReferenceOutput, StudentAnswer, TeacherGrade
 
 DATASET = Path(__file__).with_name("dataset")
 QUESTIONS = "ALL 4 Ques scores 5 Evaluators 5 students.xlsx"
@@ -26,27 +26,38 @@ def sheet_cells(workbook, member):
     return cells
 
 
-def get_question(arguments, workspace):
+def question_cells(question_id):
     with ZipFile(DATASET / QUESTIONS) as workbook:
         for member in workbook.namelist():
             if member.startswith("xl/worksheets/sheet") and member.endswith(".xml"):
                 cells = sheet_cells(workbook, member)
-                if cells.get("A3") == arguments.question_id.value:
-                    break
-        else:
-            raise ValueError("Question is missing from the dataset")
+                if cells.get("A3") == question_id.value:
+                    return cells
+    raise ValueError("Question is missing from the dataset")
 
+
+def question_context(question_id, cells):
     dimensions = [
         Dimension(f"D{i}", cells[f"{name_col}1"], [cells[f"{level_col}{row}"] for row in (7, 6, 5, 4)])
         for i, (name_col, level_col) in enumerate(zip(CRITERION_COLUMNS, "EFGHI", strict=True), 1)
     ]
-    answers = [StudentAnswer(f"S{i}", cells[f"L{row}"]) for i, row in enumerate(range(3, 8), 1)]
     model_answer = "\n".join(cells[f"J{row}"] for row in range(3, 8) if cells.get(f"J{row}"))
-    return QuestionOutput(arguments.question_id, cells["B3"], model_answer, dimensions, answers)
+    return QuestionContextOutput(question_id, cells["B3"], model_answer, dimensions)
+
+
+def get_question(arguments, workspace):
+    return question_context(arguments.question_id, question_cells(arguments.question_id))
+
+
+def load_question_with_answers(question_id):
+    cells = question_cells(question_id)
+    context = question_context(question_id, cells)
+    answers = [StudentAnswer(f"S{i}", cells[f"L{row}"]) for i, row in enumerate(range(3, 8), 1)]
+    return QuestionOutput(question_id, context.question, context.model_answer, context.dimensions, answers)
 
 
 def pin_teacher_grades(arguments, workspace):
-    question = get_question(arguments, workspace)
+    question = load_question_with_answers(arguments.question_id)
     with ZipFile(DATASET / SCORES) as workbook:
         cells = sheet_cells(workbook, "xl/worksheets/sheet1.xml")
 

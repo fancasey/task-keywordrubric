@@ -1,11 +1,7 @@
-"""Deterministic rubric rules used by both the grading tool and the verifier."""
+"""Deterministic rubric validation and scoring used by the verifier."""
 
-import hashlib
-import json
 import re
 import unicodedata
-from dataclasses import asdict
-from pathlib import Path
 
 from contract import Grade
 
@@ -26,12 +22,22 @@ def rubric_problem(rubric, dimension_ids):
             if not 1 <= len(group.alternatives) <= 20:
                 return f"{criterion.dimension_id}: each evidence group needs 1 to 20 alternatives"
             for alternative in group.alternatives:
-                terms = [normalize(term) for term in alternative]
-                if not 1 <= len(terms) <= 8 or any(not term or len(term) > 100 for term in terms):
-                    return f"{criterion.dimension_id}: each alternative needs 1 to 8 phrases, each 1 to 100 characters"
-                key = frozenset(terms)
-                if len(key) != len(terms) or key in used:
+                required = [normalize(term) for term in alternative.all_of]
+                excluded = [normalize(term) for term in alternative.none_of]
+                if (
+                    not 1 <= len(required) <= 8
+                    or len(excluded) > 8
+                    or any(not term or len(term) > 100 for term in required + excluded)
+                ):
+                    return (
+                        f"{criterion.dimension_id}: each alternative needs 1 to 8 required phrases and 0 to 8 "
+                        "excluded phrases, each 1 to 100 characters"
+                    )
+                key = (frozenset(required), frozenset(excluded))
+                if len(key[0]) != len(required) or len(key[1]) != len(excluded) or key in used:
                     return f"{criterion.dimension_id}: evidence alternatives must be distinct"
+                if key[0] & key[1]:
+                    return f"{criterion.dimension_id}: a phrase cannot be both required and excluded"
                 used.add(key)
     return None
 
@@ -44,7 +50,13 @@ def phrase_pattern(phrase):
 def grade_answers(question, rubric):
     patterns = {
         criterion.dimension_id: [
-            [[phrase_pattern(phrase) for phrase in alternative] for alternative in group.alternatives]
+            [
+                (
+                    [phrase_pattern(phrase) for phrase in alternative.all_of],
+                    [phrase_pattern(phrase) for phrase in alternative.none_of],
+                )
+                for alternative in group.alternatives
+            ]
             for group in criterion.evidence
         ]
         for criterion in rubric
@@ -55,20 +67,12 @@ def grade_answers(question, rubric):
         for dimension in question.dimensions:
             groups = patterns[dimension.dimension_id]
             score = 1 + sum(
-                any(all(pattern.search(text) for pattern in alternative) for alternative in group) for group in groups
+                any(
+                    all(pattern.search(text) for pattern in required)
+                    and not any(pattern.search(text) for pattern in excluded)
+                    for required, excluded in group
+                )
+                for group in groups
             )
             grades.append(Grade(answer.student_id, dimension.dimension_id, score))
     return grades
-
-
-def receipt_path(workspace, output):
-    content = json.dumps(
-        {
-            "question_id": output.question_id.value,
-            "rubric": [asdict(criterion) for criterion in output.rubric],
-            "grades": [asdict(grade) for grade in output.grades],
-        },
-        sort_keys=True,
-    )
-    digest = hashlib.sha256(content.encode()).hexdigest()
-    return Path(workspace) / ".keyword-rubric" / digest
