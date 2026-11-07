@@ -1,5 +1,8 @@
 """Private-reference integrity and independently calculated error metrics."""
 
+import pickle
+import subprocess
+import sys
 from copy import deepcopy
 from dataclasses import replace
 
@@ -218,3 +221,37 @@ def test_multiple_questions_can_be_verified_without_shared_state(grading_case, t
         )
         == first
     )
+
+
+def test_verifier_runs_when_plugin_imports_are_blocked(grading_case):
+    script = """
+import importlib.abc
+import pickle
+import sys
+
+class BlockPlugin(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, path=None, target=None):
+        if fullname == "plugin" or fullname.startswith("plugin."):
+            raise ImportError("Plugin implementation is unavailable to the verifier")
+
+sys.meta_path.insert(0, BlockPlugin())
+from contract import Grade, GradeAnswersInput, GradeAnswersOutput
+from verifier import verify_output, verify_task
+
+request, output, reference = pickle.loads(sys.stdin.buffer.read())
+assert verify_task("generate-rubric", request, output, reference, None)["valid"]
+arguments = GradeAnswersInput(request.question_id, output.rubric, reference.question.answers)
+expected = GradeAnswersOutput(request.question_id, [
+    Grade(answer.student_id, dimension.dimension_id, 1)
+    for answer in reference.question.answers
+    for dimension in reference.question.dimensions
+])
+assert verify_output("grade_answers", arguments, expected, None)["valid"]
+expected.grades[0].score = 4
+assert not verify_output("grade_answers", arguments, expected, None)["valid"]
+assert not any(name == "plugin" or name.startswith("plugin.") for name in sys.modules)
+"""
+    completed = subprocess.run(
+        [sys.executable, "-c", script], input=pickle.dumps(grading_case), capture_output=True, check=False
+    )
+    assert completed.returncode == 0, completed.stderr.decode()
