@@ -31,17 +31,15 @@ def test_all_response_and_score_exports_agree(question_id, tmp_path):
     cells = next(sheet for sheet in sheets if sheet["A3"] == question_id.value)
 
     reference = pin_teacher_grades(QuestionInput(question_id), tmp_path)
-    public = get_question(QuestionInput(question_id), tmp_path)
     teacher_by_key = {(grade.student_id, grade.dimension_id): grade.mean_score for grade in reference.teacher_grades}
     assert len(teacher_by_key) == 25
-    for index, dimension in enumerate(public.dimensions):
-        assert dimension.name == cells[f"{CRITERION_COLUMNS[index]}1"]
-        assert dimension.levels == [cells[f"{'EFGHI'[index]}{row}"] for row in (7, 6, 5, 4)]
+    for index, column in enumerate(CRITERION_COLUMNS):
+        dimension_name = cells[f"{column}1"]
         for answer in reference.question.answers:
-            key = answer.student_id, dimension.name
+            key = answer.student_id, dimension_name
             row = csv_by_key[key]
             assert answer.text.strip() == row["ResponseText"].strip(), key
-            teacher_mean = teacher_by_key[answer.student_id, dimension.dimension_id]
+            teacher_mean = teacher_by_key[answer.student_id, f"D{index + 1}"]
             # The original workbook has five evaluators for each dimension.
             start = 12 + 5 * index
             evaluator_columns = [
@@ -72,10 +70,8 @@ def test_public_context_excludes_student_answers_and_teacher_scores(question_id,
     request = QuestionInput(question_id)
     public = plain_output(get_question(request, tmp_path))
     reference = pin_teacher_grades(request, tmp_path)
-    assert set(public) == {"question_id", "question", "model_answer", "dimensions"}
-    assert all(set(dimension) == {"dimension_id", "name", "levels"} for dimension in public["dimensions"])
+    assert set(public) == {"question_id", "question", "model_answer"}
     assert public["question_id"] == question_id.value
     assert len(reference.question.answers) == 5
     assert all(answer.text for answer in reference.question.answers)
-    assert all(dimension.name and all(dimension.levels) for dimension in reference.question.dimensions)
     assert {grade.student_id for grade in reference.teacher_grades} == {"S1", "S2", "S3", "S4", "S5"}

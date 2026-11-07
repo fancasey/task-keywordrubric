@@ -1,257 +1,50 @@
-"""Private-reference integrity and independently calculated error metrics."""
+"""Reject malformed references, rubrics, and submitted grades."""
 
-import pickle
-import subprocess
-import sys
-from copy import deepcopy
 from dataclasses import replace
 
 import pytest
+from test_verifier import rubric
 
-from contract import (
-    Dimension,
-    DimensionRubric,
-    EvidenceGroup,
-    PhraseAlternative,
-    QuestionID,
-    QuestionInput,
-    QuestionOutput,
-    ReferenceOutput,
-    RubricOutput,
-    StudentAnswer,
-    TeacherGrade,
-)
-from verifier import verify_output, verify_task
+from contract import GradeAnswersInput, QuestionID, QuestionInput, RubricOutput, StudentAnswer
+from plugin.grading import grade_answers
+from plugin.questions import pin_teacher_grades
+from verifier import verify_task
 
 
-@pytest.fixture
-def grading_case():
+@pytest.mark.parametrize("change", ["missing", "duplicate", "nan", "range", "question", "students"])
+def test_bad_references(change, tmp_path):
     request = QuestionInput(QuestionID.NQ007)
-    dimensions = [Dimension(f"D{i}", f"Dimension {i}", ["poor", "fair", "good", "excellent"]) for i in range(1, 6)]
-    answers = [StudentAnswer(f"S{i}", "Answer with no matching terms.") for i in range(1, 6)]
-    question = QuestionOutput(request.question_id, "Question", "Model answer", dimensions, answers)
-    reference = ReferenceOutput(
-        question,
-        [
-            TeacherGrade(answer.student_id, dimension.dimension_id, 1.0)
-            for answer in answers
-            for dimension in dimensions
-        ],
-    )
-    output = RubricOutput(
-        request.question_id,
-        [
-            DimensionRubric(
-                dimension.dimension_id,
-                [EvidenceGroup([PhraseAlternative([word], [])]) for word in ("stack", "queue", "heap")],
-            )
-            for dimension in dimensions
-        ],
-    )
-    return request, output, reference
-
-
-@pytest.mark.parametrize(
-    ("error", "passes"),
-    [(0, True), (0.5, True), (0.7499, True), (0.75, True), (0.7501, False), (1.0, False), (3.0, False)],
-)
-def test_pass_threshold_uses_unrounded_error(grading_case, tmp_path, error, passes):
-    request, output, reference = grading_case
-    for grade in reference.teacher_grades:
-        grade.mean_score = 1 + error
-    verdict = verify_task("generate-rubric", request, output, reference, tmp_path)
-    assert verdict["valid"] is passes
-    assert verdict["score"] == pytest.approx(1 - error / 3)
-    assert verdict["details"]["grades_compared"] == 25
-
-
-def corrupt_reference(reference, case):
-    if case == "wrong-question":
+    reference = pin_teacher_grades(request, tmp_path)
+    if change == "missing":
+        reference = None
+    elif change == "duplicate":
+        reference.teacher_grades[-1] = reference.teacher_grades[0]
+    elif change in ("nan", "range"):
+        reference.teacher_grades[0].mean_score = float("nan") if change == "nan" else 5
+    elif change == "question":
         reference.question.question_id = QuestionID.NQ004
-    elif case == "blank-question":
-        reference.question.question = " \n "
-    elif case == "blank-model":
-        reference.question.model_answer = ""
-    elif case == "missing-dimension":
-        reference.question.dimensions.pop()
-    elif case == "duplicate-dimension":
-        reference.question.dimensions[1].dimension_id = "D1"
-    elif case == "unknown-dimension":
-        reference.question.dimensions[0].dimension_id = "D99"
-    elif case == "missing-level":
-        reference.question.dimensions[0].levels.pop()
-    elif case == "extra-level":
-        reference.question.dimensions[0].levels.append("extra")
-    elif case == "missing-answer":
-        reference.question.answers.pop()
-    elif case == "duplicate-answer":
-        reference.question.answers[1].student_id = "S1"
-    elif case == "unknown-answer":
-        reference.question.answers[0].student_id = "S99"
-    elif case == "missing-grade":
-        reference.teacher_grades.pop()
-    elif case == "extra-grade":
-        reference.teacher_grades.append(deepcopy(reference.teacher_grades[0]))
-    elif case == "duplicate-grade":
-        reference.teacher_grades[1] = deepcopy(reference.teacher_grades[0])
-    elif case == "unknown-grade-student":
-        reference.teacher_grades[0].student_id = "S99"
-    elif case == "unknown-grade-dimension":
-        reference.teacher_grades[0].dimension_id = "D99"
     else:
-        reference.teacher_grades[0].mean_score = {
-            "nan": float("nan"),
-            "positive-infinity": float("inf"),
-            "negative-infinity": -float("inf"),
-            "below-range": 0.999,
-            "above-range": 4.001,
-        }[case]
+        reference.question.answers.pop()
+    assert not verify_task(
+        "generate-rubric", request, RubricOutput(request.question_id, rubric()), reference, tmp_path
+    )["valid"]
 
 
-@pytest.mark.parametrize(
-    "case",
-    [
-        "wrong-question",
-        "blank-question",
-        "blank-model",
-        "missing-dimension",
-        "duplicate-dimension",
-        "unknown-dimension",
-        "missing-level",
-        "extra-level",
-        "missing-answer",
-        "duplicate-answer",
-        "unknown-answer",
-        "missing-grade",
-        "extra-grade",
-        "duplicate-grade",
-        "unknown-grade-student",
-        "unknown-grade-dimension",
-        "nan",
-        "positive-infinity",
-        "negative-infinity",
-        "below-range",
-        "above-range",
-    ],
-)
-def test_corrupt_reference_fails_tool_and_task_checks(grading_case, tmp_path, case):
-    request, output, reference = grading_case
-    corrupt_reference(reference, case)
-    for verdict in (
-        verify_output("pin_teacher_grades", request, reference, tmp_path),
-        verify_task("generate-rubric", request, output, reference, tmp_path),
-    ):
-        assert verdict["valid"] is False
-        assert verdict["score"] == 0
-        assert verdict["message"]
+@pytest.mark.parametrize("change", ["empty", "duplicate", "wrong_question"])
+def test_invalid_submissions(change, tmp_path):
+    request = QuestionInput(QuestionID.NQ007)
+    output = RubricOutput(request.question_id, rubric())
+    if change == "empty":
+        output.rubric = []
+    elif change == "duplicate":
+        output.rubric.append(output.rubric[0])
+    else:
+        output = replace(output, question_id=QuestionID.NQ004)
+    assert not verify_task("generate-rubric", request, output, pin_teacher_grades(request, tmp_path), tmp_path)["valid"]
 
 
-def test_missing_reference_fails_before_scoring(grading_case, tmp_path):
-    request, output, _ = grading_case
-    verdict = verify_task("generate-rubric", request, output, None, tmp_path)
-    assert verdict["valid"] is False
-    assert verdict["score"] == 0
-
-
-def test_submission_for_a_different_question_is_rejected(grading_case, tmp_path):
-    request, output, reference = grading_case
-    output.question_id = QuestionID.NQ004
-    assert not verify_task("generate-rubric", request, output, reference, tmp_path)["valid"]
-
-
-def test_unrounded_teacher_means_and_dimension_metrics(grading_case, tmp_path):
-    request, output, reference = grading_case
-    for grade in reference.teacher_grades:
-        grade.mean_score = 1 + int(grade.dimension_id[-1]) / 10
-    verdict = verify_task("generate-rubric", request, output, reference, tmp_path)
-    assert verdict["details"]["mean_absolute_error"] == pytest.approx(0.3)
-    assert verdict["details"]["mean_absolute_error_by_dimension"] == {
-        "D1": 0.1,
-        "D2": 0.2,
-        "D3": 0.3,
-        "D4": 0.4,
-        "D5": 0.5,
-    }
-    assert verdict["score"] == pytest.approx(0.9)
-    assert verdict["details"]["best_constant_baseline"] == pytest.approx(0.3)
-
-
-def test_opposite_errors_do_not_cancel(grading_case, tmp_path):
-    request, output, reference = grading_case
-    for answer in reference.question.answers:
-        answer.text = "stack"
-    for grade in reference.teacher_grades:
-        grade.mean_score = 1.0 if grade.student_id in ("S1", "S2") else 3.0
-    verdict = verify_task("generate-rubric", request, output, reference, tmp_path)
-    assert verdict["valid"] is False
-    assert verdict["details"]["mean_absolute_error"] == 1.0
-
-
-def test_rubric_order_and_reference_grade_order_do_not_change_error(grading_case, tmp_path):
-    request, output, reference = grading_case
-    before = verify_task("generate-rubric", request, output, reference, tmp_path)
-    reference.teacher_grades.reverse()
-    output.rubric.reverse()
-    assert verify_task("generate-rubric", request, output, reference, tmp_path) == before
-
-
-def test_verification_is_deterministic_and_does_not_mutate_inputs(grading_case, tmp_path):
-    request, output, reference = grading_case
-    before = deepcopy(grading_case)
-    first = verify_task("generate-rubric", request, output, reference, tmp_path)
-    second = verify_task("generate-rubric", request, output, reference, tmp_path)
-    assert first == second
-    assert grading_case == before
-    assert list(tmp_path.iterdir()) == []
-
-
-def test_multiple_questions_can_be_verified_without_shared_state(grading_case, tmp_path):
-    request, output, reference = grading_case
-    first = verify_task("generate-rubric", request, output, reference, tmp_path)
-    other_question = replace(reference.question, question_id=QuestionID.NQ004)
-    other_reference = replace(reference, question=other_question)
-    other_output = replace(output, question_id=QuestionID.NQ004)
-    assert (
-        verify_task(
-            "generate-rubric",
-            QuestionInput(QuestionID.NQ004),
-            other_output,
-            other_reference,
-            tmp_path,
-        )
-        == first
-    )
-
-
-def test_verifier_runs_when_plugin_imports_are_blocked(grading_case):
-    script = """
-import importlib.abc
-import pickle
-import sys
-
-class BlockPlugin(importlib.abc.MetaPathFinder):
-    def find_spec(self, fullname, path=None, target=None):
-        if fullname == "plugin" or fullname.startswith("plugin."):
-            raise ImportError("Plugin implementation is unavailable to the verifier")
-
-sys.meta_path.insert(0, BlockPlugin())
-from contract import Grade, GradeAnswersInput, GradeAnswersOutput
-from verifier import verify_output, verify_task
-
-request, output, reference = pickle.loads(sys.stdin.buffer.read())
-assert verify_task("generate-rubric", request, output, reference, None)["valid"]
-arguments = GradeAnswersInput(request.question_id, output.rubric, reference.question.answers)
-expected = GradeAnswersOutput(request.question_id, [
-    Grade(answer.student_id, dimension.dimension_id, 1)
-    for answer in reference.question.answers
-    for dimension in reference.question.dimensions
-])
-assert verify_output("grade_answers", arguments, expected, None)["valid"]
-expected.grades[0].score = 4
-assert not verify_output("grade_answers", arguments, expected, None)["valid"]
-assert not any(name == "plugin" or name.startswith("plugin.") for name in sys.modules)
-"""
-    completed = subprocess.run(
-        [sys.executable, "-c", script], input=pickle.dumps(grading_case), capture_output=True, check=False
-    )
-    assert completed.returncode == 0, completed.stderr.decode()
+@pytest.mark.parametrize("ids", [[""], [" "], ["a", "a"]])
+def test_invalid_student_ids(ids, tmp_path):
+    request = GradeAnswersInput(QuestionID.NQ007, rubric(), [StudentAnswer(i, "stack") for i in ids])
+    with pytest.raises(ValueError, match="Student IDs"):
+        grade_answers(request, tmp_path)

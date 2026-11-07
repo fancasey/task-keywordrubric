@@ -18,19 +18,11 @@ function alternativeRow(alternative, index) {
 }
 
 function evidenceGroup(group, index) {
-  return h("section", { class: "evidence-group", "aria-label": `Evidence group ${index + 1}` },
+  return h("section", { class: "evidence-group", "aria-label": `Keyword group ${index + 1}` },
     h("div", { class: "group-heading" },
-      h("h4", {}, `Evidence ${index + 1}`),
-      h("span", { class: "point-label" }, "+1 point")),
+      h("h4", {}, `Keyword group ${index + 1}`),
+      h("span", { class: "point-label" }, "Equal credit")),
     h("ul", { class: "alternatives" }, group.alternatives.map(alternativeRow)));
-}
-
-function dimensionSection(dimension, index) {
-  return h("details", { class: "dimension", open: index === 0 },
-    h("summary", { class: "dimension-heading" },
-      h("span", { class: "dimension-title" }, dimension.dimension_id),
-      h("span", { class: "dimension-meta" }, `${dimension.evidence.length} evidence groups · Score 1–4`)),
-    h("div", { class: "evidence-list" }, dimension.evidence.map(evidenceGroup)));
 }
 
 export default {
@@ -39,8 +31,8 @@ export default {
       h("div", {},
         h("p", { class: "eyebrow" }, value.question_id),
         h("h2", {}, "Keyword rubric")),
-      h("span", { class: "dimension-count" }, `${value.rubric.length} dimensions`)),
+      h("span", { class: "group-count" }, `${value.rubric.length} keyword groups`)),
     h("p", { class: "scoring-guide" },
-      "Start at 1 point per dimension. Each evidence group adds 1 point when any option matches. Within an option, every required phrase must appear and every excluded phrase must be absent."),
-    h("div", { class: "dimensions" }, value.rubric.map(dimensionSection))),
+      "Score = 1 + 3 × matched groups / total groups. Each group counts once when any option matches. Within an option, every required phrase must appear and every excluded phrase must be absent."),
+    h("div", { class: "evidence-list" }, value.rubric.map(evidenceGroup))),
 };

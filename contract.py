@@ -36,18 +36,10 @@ class StudentAnswer(Output):
 
 
 @dataclass
-class Dimension(Output):
-    dimension_id: str
-    name: str
-    levels: Annotated[list[str], "Teacher descriptions for scores 1, 2, 3, and 4, in order"]
-
-
-@dataclass
 class QuestionContextOutput(Output):
     question_id: QuestionID
     question: str
     model_answer: str
-    dimensions: list[Dimension]
 
 
 @dataclass
@@ -70,24 +62,15 @@ class EvidenceGroup(Output):
 
 
 @dataclass
-class DimensionRubric(Output):
-    dimension_id: str
-    evidence: Annotated[
-        list[EvidenceGroup], "Exactly three distinct evidence groups. Each matching group earns one point above 1."
-    ]
-
-
-@dataclass
 class RubricOutput(Output):
     question_id: QuestionID
-    rubric: list[DimensionRubric]
+    rubric: Annotated[list[EvidenceGroup], "1 to 20 equally weighted keyword groups; no teacher criteria required"]
 
 
 @dataclass
 class Grade(Output):
     student_id: str
-    dimension_id: str
-    score: Annotated[int, "Keyword rubric score from 1 to 4"]
+    score: Annotated[float, "Overall score: 1 + 3 * matched groups / total groups"]
 
 
 @dataclass

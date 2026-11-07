@@ -1,6 +1,6 @@
 _ > nanoagent.plugin.v0001.ProductConfig:
 tagline: Build keyword rubrics and compare the grades with teachers
-summary: The agent builds a keyword rubric from a data structures question, model answer, and teacher criteria. The verifier applies it to five private student answers.
+summary: The agent builds a keyword rubric from a data structures question and model answer. The verifier applies it to five private student answers.
 highlights:
   - Four data structures questions with real graded answers
   - One shared rubric for every student answering a question

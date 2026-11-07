@@ -4,37 +4,15 @@ from itertools import product
 
 import pytest
 
-from contract import (
-    Dimension,
-    DimensionRubric,
-    EvidenceGroup,
-    PhraseAlternative,
-    QuestionID,
-    QuestionOutput,
-    StudentAnswer,
-)
-from verifier.scoring import grade_answers, normalize
+from contract import EvidenceGroup, PhraseAlternative, StudentAnswer
+from verifier.scoring import normalize, score_answers
 
 
 def one_group_score(text, alternatives):
-    question = QuestionOutput(
-        QuestionID.NQ007,
-        "Compare DFS and BFS",
-        "DFS uses a stack and BFS uses a queue",
-        [Dimension("D1", "Structures", ["1", "2", "3", "4"])],
-        [StudentAnswer("S1", text)],
-    )
-    rubric = [
-        DimensionRubric(
-            "D1",
-            [
-                EvidenceGroup(alternatives),
-                EvidenceGroup([PhraseAlternative(["unmatchedsecond"], [])]),
-                EvidenceGroup([PhraseAlternative(["unmatchedthird"], [])]),
-            ],
-        )
+    rubric = [EvidenceGroup(alternatives)] + [
+        EvidenceGroup([PhraseAlternative([word], [])]) for word in ("unmatchedsecond", "unmatchedthird")
     ]
-    return grade_answers(question, rubric)[0].score
+    return score_answers([StudentAnswer("S1", text)], rubric)[0].score
 
 
 @pytest.mark.parametrize(
@@ -97,30 +75,9 @@ def test_or_and_not_truth_table(heap, stack, queue, recursive):
 
 @pytest.mark.parametrize("matched", list(product([False, True], repeat=3)))
 def test_three_groups_give_scores_from_one_to_four(matched):
-    question = QuestionOutput(
-        QuestionID.NQ007,
-        "Question",
-        "Model",
-        [Dimension("D1", "Structures", ["1", "2", "3", "4"])],
-        [
-            StudentAnswer(
-                "S1",
-                " ".join(
-                    word
-                    for word, present in zip(
-                        ("stack", "queue", "heap"),
-                        matched,
-                        strict=True,
-                    )
-                    if present
-                ),
-            )
-        ],
-    )
-    rubric = [
-        DimensionRubric("D1", [EvidenceGroup([PhraseAlternative([word], [])]) for word in ("stack", "queue", "heap")])
-    ]
-    assert grade_answers(question, rubric)[0].score == 1 + sum(matched)
+    rubric = [EvidenceGroup([PhraseAlternative([word], [])]) for word in ("stack", "queue", "heap")]
+    text = " ".join(word for word, present in zip(("stack", "queue", "heap"), matched) if present)
+    assert score_answers([StudentAnswer("S1", text)], rubric)[0].score == 1 + sum(matched)
 
 
 @pytest.mark.parametrize("repetitions", [1, 2, 10, 1000])
@@ -152,27 +109,7 @@ def test_each_excluded_phrase_can_veto_an_alternative():
     assert one_group_score("stack heap", alternatives) == 2
 
 
-def test_answers_and_dimensions_do_not_share_match_state():
-    question = QuestionOutput(
-        QuestionID.NQ007,
-        "Question",
-        "Model",
-        [Dimension("D1", "Stacks", ["1", "2", "3", "4"]), Dimension("D2", "Queues", ["1", "2", "3", "4"])],
-        [StudentAnswer("S1", "stack"), StudentAnswer("S2", "queue"), StudentAnswer("S3", "")],
-    )
-    rubric = [
-        DimensionRubric(
-            dimension,
-            [EvidenceGroup([PhraseAlternative([term], [])]) for term in (word, "unmatchedsecond", "unmatchedthird")],
-        )
-        for dimension, word in (("D2", "queue"), ("D1", "stack"))
-    ]
-    actual = [(grade.student_id, grade.dimension_id, grade.score) for grade in grade_answers(question, rubric)]
-    assert actual == [
-        ("S1", "D1", 2),
-        ("S1", "D2", 1),
-        ("S2", "D1", 1),
-        ("S2", "D2", 2),
-        ("S3", "D1", 1),
-        ("S3", "D2", 1),
-    ]
+def test_answers_do_not_share_match_state():
+    rubric = [EvidenceGroup([PhraseAlternative([word], [])]) for word in ("stack", "queue")]
+    answers = [StudentAnswer(str(i), text) for i, text in enumerate(("stack", "queue", "", "stack queue"))]
+    assert [g.score for g in score_answers(answers, rubric)] == [2.5, 2.5, 1, 4]

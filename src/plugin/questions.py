@@ -4,7 +4,7 @@ from pathlib import Path
 from xml.etree import ElementTree
 from zipfile import ZipFile
 
-from contract import Dimension, QuestionContextOutput, QuestionOutput, ReferenceOutput, StudentAnswer, TeacherGrade
+from contract import QuestionContextOutput, QuestionOutput, ReferenceOutput, StudentAnswer, TeacherGrade
 
 DATASET = Path(__file__).with_name("dataset")
 QUESTIONS = "ALL 4 Ques scores 5 Evaluators 5 students.xlsx"
@@ -37,12 +37,8 @@ def question_cells(question_id):
 
 
 def question_context(question_id, cells):
-    dimensions = [
-        Dimension(f"D{i}", cells[f"{name_col}1"], [cells[f"{level_col}{row}"] for row in (7, 6, 5, 4)])
-        for i, (name_col, level_col) in enumerate(zip(CRITERION_COLUMNS, "EFGHI", strict=True), 1)
-    ]
     model_answer = "\n".join(cells[f"J{row}"] for row in range(3, 8) if cells.get(f"J{row}"))
-    return QuestionContextOutput(question_id, cells["B3"], model_answer, dimensions)
+    return QuestionContextOutput(question_id, cells["B3"], model_answer)
 
 
 def get_question(arguments, workspace):
@@ -53,7 +49,7 @@ def load_question_with_answers(question_id):
     cells = question_cells(question_id)
     context = question_context(question_id, cells)
     answers = [StudentAnswer(f"S{i}", cells[f"L{row}"]) for i, row in enumerate(range(3, 8), 1)]
-    return QuestionOutput(question_id, context.question, context.model_answer, context.dimensions, answers)
+    return QuestionOutput(question_id, context.question, context.model_answer, answers)
 
 
 def pin_teacher_grades(arguments, workspace):
@@ -61,7 +57,8 @@ def pin_teacher_grades(arguments, workspace):
     with ZipFile(DATASET / SCORES) as workbook:
         cells = sheet_cells(workbook, "xl/worksheets/sheet1.xml")
 
-    dimensions = {dimension.name: dimension.dimension_id for dimension in question.dimensions}
+    cells_for_question = question_cells(arguments.question_id)
+    dimensions = {cells_for_question[f"{column}1"]: f"D{i}" for i, column in enumerate(CRITERION_COLUMNS, 1)}
     grades = [
         TeacherGrade(cells[f"C{row}"], dimensions[cells[f"B{row}"]], float(cells[f"I{row}"]))
         for row in range(2, len([cell for cell in cells if cell.startswith("A")]) + 1)
