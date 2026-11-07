@@ -10,7 +10,7 @@ Generation favors a quick, reasonable first pass: usually 1–3 obvious alternat
 2. The agent reads the question and model answer using `get_question`. The agent can optionally list students and fetch individual dataset responses. Teacher scores remain private to the verifier.
 3. The agent submits a flat list of keyword groups for the whole answer, usually 3–6 important concepts. Each group matches when any alternative matches; each alternative requires all `all_of` phrases and excludes all `none_of` phrases. No teacher dimensions are needed.
 4. Each student's overall score is **1 + 3 × matched groups / total groups**. With four groups, zero, one, two, three, or four matches earn 1, 1.75, 2.5, 3.25, or 4. Repetitions and multiple matching alternatives in the same group earn no extra credit.
-5. The verifier averages each student's unrounded teacher scores across all five criteria (each already averaged across five evaluators) and compares the five overall scores. The pass threshold is a mean absolute error of 0.75 points on the 1–4 scale. It also reports the best constant integer baseline.
+5. The verifier averages each student's unrounded teacher scores across all five criteria (each already averaged across five evaluators) and compares the five overall scores. The pass threshold is a mean absolute error of 1.0 point on the 1–4 scale. It also reports the best constant integer baseline.
 
 The keyword rubric can use different criteria from the teachers; only final scores are compared. Teacher means come from the mean-score workbook. The question workbook supplies the text, and the CSV is a dataset export with rounded scores.
 

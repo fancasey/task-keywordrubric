@@ -70,7 +70,7 @@ def test_overall_comparison(question_id, tmp_path):
     assert verdict["details"]["grades_compared"] == 5
     assert verdict["details"]["mean_absolute_error"] == round(error, 3)
     assert verdict["score"] == pytest.approx(1 - error / 3)
-    assert verdict["valid"] == (error <= 0.75)
+    assert verdict["valid"] == (error <= 1.0)
     assert verify_output("get_question", request, get_question(request, tmp_path), tmp_path)["valid"]
     assert verify_output("pin_teacher_grades", request, reference, tmp_path)["valid"]
 

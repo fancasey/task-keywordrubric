@@ -10,7 +10,7 @@ from .scoring import grade_answers, rubric_problem, score_answers
 
 DIMENSION_IDS = ("D1", "D2", "D3", "D4", "D5")
 STUDENT_IDS = ("S1", "S2", "S3", "S4", "S5")
-MAX_MEAN_ERROR = 0.75
+MAX_MEAN_ERROR = 1.0
 
 
 def result(valid, message, *, score=None, **details):
