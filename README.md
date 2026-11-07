@@ -67,7 +67,7 @@ The rubric-generation agent can call `list_students` and `get_student_response` 
 - `nanoagent.yaml` defines the plugin, tools, and grading task. `contract.py` defines their data types.
 - `src/plugin/` contains the MCP server, tool implementations, and dataset.
 - `verifier/` contains the rubric scoring and verification logic. `tests/test_verifier.py` exercises both.
-- `verifier/student_answers.json` is the verifier's independent lookup reference. Keep it in sync with the bundled dataset when responses change; the lookup tests compare every response.
+- `verifier/student_answers.py` is the verifier's independent lookup reference. Keep it in sync with the bundled dataset when responses change; the lookup tests compare every response.
 - `product/` and `ui/` contain the product definition and display assets.
 
 ## Develop and run

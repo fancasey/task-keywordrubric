@@ -1,14 +1,12 @@
 """Check dataset lookups against a verifier-owned response snapshot."""
 
-import json
-from pathlib import Path
-
 from contract import StudentAnswer, StudentListOutput, StudentResponseOutput
+
+from .student_answers import STUDENT_ANSWERS
 
 
 def student_answers(question_id):
-    data = json.loads(Path(__file__).with_name("student_answers.json").read_text(encoding="utf-8"))
-    return data[question_id.value]
+    return STUDENT_ANSWERS[question_id.value]
 
 
 def list_students(arguments, workspace):
