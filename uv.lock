@@ -338,7 +338,7 @@ wheels = [
 
 [[package]]
 name = "nanoagent-keyword-rubric"
-version = "0.5.1"
+version = "0.5.3"
 source = { editable = "." }
 dependencies = [
     { name = "mcp" },

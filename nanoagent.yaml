@@ -1,7 +1,7 @@
 _ > nanoagent.plugin.v0001.ManifestConfig:
 id: keyword-rubric
 name: Keyword Rubric Grader
-version: 0.5.2
+version: 0.5.3
 status: ready
 spec: nanoagent.plugin/v0001
 

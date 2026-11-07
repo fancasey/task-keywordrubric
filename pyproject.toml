@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nanoagent-keyword-rubric"
-version = "0.5.2"
+version = "0.5.3"
 description = "Build and verify keyword grading rubrics in NanoAgent"
 requires-python = ">=3.12"
 dependencies = ["mcp>=1.27,<2", "slimconfig"]
