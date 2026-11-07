@@ -3,7 +3,7 @@
 from math import isfinite
 from statistics import mean
 
-from contract import GradeAnswersOutput, Tool
+from contract import GradeAnswersOutput, Task, Tool
 
 from .scoring import grade_answers, rubric_problem, score_answers
 
@@ -71,6 +71,9 @@ def verify_output(tool, input_value, output_value, workspace):
 
 
 def verify_task(task, arguments, output, reference, workspace):
+    task = Task(task)
+    if task is Task.GRADE_ANSWERS:
+        return verify_output(Tool.GRADE_ANSWERS, arguments, output, workspace)
     if reference is None:
         return result(False, "The pinned teacher reference is missing")
     problem = reference_problem(reference, arguments.question_id)

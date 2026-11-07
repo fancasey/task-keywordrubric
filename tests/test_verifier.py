@@ -58,3 +58,26 @@ def test_tool_matches_independent_verifier(tmp_path):
     assert verify_output("grade_answers", request, actual, tmp_path)["valid"]
     tampered = GradeAnswersOutput(request.question_id, [replace(g, score=4) for g in actual.grades])
     assert not verify_output("grade_answers", request, tampered, tmp_path)["valid"]
+
+
+def test_grading_task_uses_tool_contract_and_needs_no_teacher_reference(tmp_path):
+    from contract import TASKS, Task
+
+    assert TASKS[Task.GRADE_ANSWERS] == (GradeAnswersInput, GradeAnswersOutput)
+    request = GradeAnswersInput(QuestionID.NQ007, rubric(), [StudentAnswer("custom", "stack queue")])
+    output = grade_answers(request, tmp_path)
+    assert verify_task("grade-answers", request, output, None, tmp_path)["valid"]
+    tampered = replace(output, grades=[replace(output.grades[0], score=4)])
+    assert not verify_task("grade-answers", request, tampered, None, tmp_path)["valid"]
+    assert not verify_task("grade-answers", request, replace(output, grades=[]), None, tmp_path)["valid"]
+    assert not verify_task(
+        "grade-answers", request, replace(output, question_id=QuestionID.NQ004), None, tmp_path
+    )["valid"]
+
+
+def test_grading_task_rejects_invalid_inputs(tmp_path):
+    request = GradeAnswersInput(QuestionID.NQ007, [], [StudentAnswer("custom", "stack")])
+    output = GradeAnswersOutput(request.question_id, [])
+    assert not verify_task("grade-answers", request, output, None, tmp_path)["valid"]
+    request = replace(request, rubric=rubric(), answers=[StudentAnswer("duplicate", "")] * 2)
+    assert not verify_task("grade-answers", request, output, None, tmp_path)["valid"]

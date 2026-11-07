@@ -49,7 +49,10 @@ Use this tool for all grading; do not assign grades by hand. The verifier also c
 
 | Task | Purpose |
 | --- | --- |
+| `grade-answers` | Grade supplied answers with a specified rubric by calling `grade_answers` and returning its scores unchanged. |
 | `generate-rubric` | Generate a keyword rubric for NQ004, NQ007, NQ008, or NQ009. The verifier grades the private submissions and compares the grades with pinned teacher means. |
+
+Run `grade-answers` with `question_id`, `rubric`, and `answers` in the same format as the grading tool. It uses `runner: tool`: the runtime calls `grade_answers` once with the task input and returns the tool output directly. No agent grading or rubric changes occur. This task needs no pinned teacher reference. Its verifier checks the returned grades against deterministic scoring of the supplied inputs.
 
 ## Layout
 

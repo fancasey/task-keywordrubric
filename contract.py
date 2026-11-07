@@ -15,6 +15,7 @@ class Tool(Enum):
 
 class Task(Enum):
     GENERATE_RUBRIC = "generate-rubric"
+    GRADE_ANSWERS = "grade-answers"
 
 
 class QuestionID(Enum):
@@ -102,4 +103,7 @@ TOOLS = {
     Tool.GET_QUESTION: (QuestionInput, QuestionContextOutput),
     Tool.PIN_TEACHER_GRADES: (QuestionInput, ReferenceOutput),
 }
-TASKS = {Task.GENERATE_RUBRIC: (QuestionInput, RubricOutput)}
+TASKS = {
+    Task.GENERATE_RUBRIC: (QuestionInput, RubricOutput),
+    Task.GRADE_ANSWERS: (GradeAnswersInput, GradeAnswersOutput),
+}
