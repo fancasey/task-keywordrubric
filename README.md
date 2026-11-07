@@ -34,8 +34,13 @@ Each group allows 1–20 alternatives, with phrases of 1–100 normalized charac
 
 | Tool | Purpose |
 | --- | --- |
+| `grade_answers` | Grade supplied answers using a specified rubric; returns a score per student and dimension. |
 | `get_question` | Return the question, model answer, and teacher criteria. |
 | `pin_teacher_grades` | Supply the question data and unrounded teacher means as the private verifier reference. |
+
+Call `grade_answers` with `question_id`, the complete `rubric` (same format as the task output), and `answers` as a list of `{ "student_id": "S1", "text": "..." }` objects. It validates the rubric against the question's five dimensions and rejects duplicate or blank student IDs. Empty answer text earns the base score of 1. It returns `question_id` and `grades`, each containing `student_id`, `dimension_id`, and `score`. It does not load private student answers or teacher grades.
+
+Use this tool for all grading; do not assign grades by hand. The verifier also calls this tool's implementation for private submissions.
 
 ### Tasks
 

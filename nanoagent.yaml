@@ -1,7 +1,7 @@
 _ > nanoagent.plugin.v0001.ManifestConfig:
 id: keyword-rubric
 name: Keyword Rubric Grader
-version: 0.2.0
+version: 0.3.0
 status: ready
 spec: nanoagent.plugin/v0001
 
@@ -16,6 +16,8 @@ permissions > nanoagent.plugin.v0001.PermissionsConfig:
     write: [workspace]
 
 tools > dict[contract.Tool, nanoagent.plugin.v0001.ToolConfig]:
+  grade_answers:
+    description: Grade supplied student answers deterministically using the specified keyword rubric
   get_question:
     description: Get the question, model answer, and teacher criteria
   pin_teacher_grades:
@@ -25,9 +27,10 @@ tasks > dict[contract.Task, nanoagent.plugin.v0001.TaskConfig]:
   generate-rubric:
     description: Build a deterministic keyword rubric for NQ004, NQ007, NQ008, or NQ009
     runner: agent
-    tools: [get_question]
+    tools: [get_question, grade_answers]
     reference: pin_teacher_grades
     instructions: |-
       Call get_question with the task's question_id. Use the question, model answer, and teacher level descriptions to build one rubric entry per dimension_id.
       Each dimension starts at 1 and has exactly three distinct evidence groups worth one point each. Each group matches if any of its alternatives matches. Each alternative has all_of (1 to 8 required literal words or short phrases) and none_of (0 to 8 excluded phrases; use [] when there are none). It matches only when every all_of phrase occurs somewhere in the answer and no none_of phrase occurs. Phrases must be 1 to 100 normalized characters. For "A or (B and C without D)", use alternatives [{all_of: [A], none_of: []}, {all_of: [B, C], none_of: [D]}]. Exclusions apply only to their own alternative, and any excluded phrase vetoes that alternative. Do not require and exclude the same phrase. Each group has 1 to 20 alternatives; avoid duplicates within a dimension. Use common synonyms for key concepts and combine terms when a single word is ambiguous. Matching uses Unicode NFKC normalization, case folding, collapsed whitespace, and word boundaries around literal phrases. Each group contributes at most one point, regardless of repeated matches.
+      Use grade_answers for all grading with the specified rubric; never assign or estimate grades by hand. Supply question_id, rubric, and answers. The tool grades only the supplied answers and does not reveal private submissions.
       Submit only the question_id and the complete rubric. The verifier applies the rubric to the private student submissions and compares the resulting grades with teacher means.

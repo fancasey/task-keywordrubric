@@ -24,7 +24,7 @@ def test_real_mcp_question_tools_and_invalid_requests(tmp_path):
         async with stdio_client(parameters) as (read, write), ClientSession(read, write) as session:
             await session.initialize()
             listed = await session.list_tools()
-            assert {tool.name for tool in listed.tools} == {"get_question", "pin_teacher_grades"}
+            assert {tool.name for tool in listed.tools} == {"get_question", "pin_teacher_grades", "grade_answers"}
             for question_id in QuestionID:
                 request = {"question_id": question_id.value}
                 public = await session.call_tool("get_question", request)
@@ -38,6 +38,33 @@ def test_real_mcp_question_tools_and_invalid_requests(tmp_path):
                 assert {key: value for key, value in reference["question"].items() if key != "answers"} == (
                     public.structuredContent
                 )
+
+            rubric = [
+                {"dimension_id": f"D{i}", "evidence": [
+                    {"alternatives": [{"all_of": [word], "none_of": []}]}
+                    for word in ("stack", "queue", "heap")
+                ]}
+                for i in range(1, 6)
+            ]
+            grading_request = {
+                "question_id": "NQ007", "rubric": rubric,
+                "answers": [{"student_id": "custom", "text": "STACK queue"}],
+            }
+            graded = await session.call_tool("grade_answers", grading_request)
+            assert not graded.isError
+            assert graded.structuredContent == {
+                "question_id": "NQ007", "grades": [
+                    {"student_id": "custom", "dimension_id": f"D{i}", "score": 3}
+                    for i in range(1, 6)
+                ],
+            }
+            for changes in (
+                {"rubric": []},
+                {"answers": [{"student_id": "", "text": "stack"}]},
+                {"answers": grading_request["answers"] * 2},
+            ):
+                rejected = await session.call_tool("grade_answers", {**grading_request, **changes})
+                assert rejected.isError
 
             for name, arguments in [
                 ("get_question", {}),

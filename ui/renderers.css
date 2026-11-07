@@ -1,1 +1,37 @@
-/* The host renders grades and rubric evidence from the output schema. */
+.rubric-result {
+  color: var(--text, #20242e);
+  font: inherit;
+  line-height: 1.5;
+  min-width: 0;
+  max-width: 100%;
+  text-align: left;
+}
+.rubric-result *, .rubric-result *::before, .rubric-result *::after { box-sizing: border-box; }
+.rubric-header, .group-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.rubric-header h2 { font-size: 1.25rem; margin: 2px 0 0; }
+.eyebrow { color: var(--muted, #626b7d); font-size: .8rem; font-weight: 650; letter-spacing: .06em; margin: 0; }
+.dimension-count, .point-label { font-size: .8rem; color: var(--muted, #626b7d); white-space: nowrap; }
+.scoring-guide { color: var(--muted, #626b7d); font-size: .9rem; margin: 12px 0 20px; max-width: 80ch; }
+.dimensions { display: grid; gap: 10px; min-width: 0; }
+.dimension { border: 1px solid var(--border, #dfe3eb); border-radius: 10px; min-width: 0; overflow-wrap: anywhere; }
+.dimension-heading { cursor: pointer; padding: 14px 16px; }
+.dimension-heading:focus-visible { outline: 2px solid var(--accent, #405da8); outline-offset: 2px; border-radius: 8px; }
+.dimension-title { font-weight: 650; margin-left: 6px; }
+.dimension-meta { color: var(--muted, #626b7d); font-size: .8rem; margin-left: 12px; }
+.evidence-list { padding: 0 16px 16px; display: grid; gap: 12px; }
+.evidence-group { min-width: 0; border-top: 1px solid var(--border, #dfe3eb); padding-top: 12px; }
+.group-heading h4 { font-size: .9rem; margin: 0; }
+.alternatives { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+.alternative { display: grid; grid-template-columns: 46px minmax(0, 1fr); gap: 8px; padding: 8px 0; }
+.option-label { color: var(--muted, #626b7d); font-size: .65rem; font-weight: 650; padding-top: 5px; }
+.conditions { display: grid; gap: 6px; min-width: 0; }
+.condition { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 10px; min-width: 0; }
+.condition-label { font-size: .75rem; color: var(--muted, #626b7d); }
+.phrases { display: flex; flex-wrap: wrap; gap: 5px; min-width: 0; max-width: 100%; }
+.phrase { border-radius: 5px; border: 1px solid var(--border, #dfe3eb); padding: 2px 8px; font-size: .85rem; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.excluded { border-style: dashed; }
+@media (max-width: 480px) {
+  .dimension-meta { display: block; margin: 4px 0 0 20px; }
+  .dimension-heading { padding: 12px; }
+  .evidence-list { padding: 0 12px 12px; }
+}

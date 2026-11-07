@@ -9,6 +9,7 @@ from slimconfig import Output
 
 class Tool(Enum):
     GET_QUESTION = "get_question"
+    GRADE_ANSWERS = "grade_answers"
     PIN_TEACHER_GRADES = "pin_teacher_grades"
 
 
@@ -90,6 +91,17 @@ class Grade(Output):
 
 
 @dataclass
+class GradeAnswersInput(RubricOutput):
+    answers: Annotated[list[StudentAnswer], "Student answers to grade using the supplied rubric only"]
+
+
+@dataclass
+class GradeAnswersOutput(Output):
+    question_id: QuestionID
+    grades: list[Grade]
+
+
+@dataclass
 class TeacherGrade(Output):
     student_id: str
     dimension_id: str
@@ -103,6 +115,7 @@ class ReferenceOutput(Output):
 
 
 TOOLS = {
+    Tool.GRADE_ANSWERS: (GradeAnswersInput, GradeAnswersOutput),
     Tool.GET_QUESTION: (QuestionInput, QuestionContextOutput),
     Tool.PIN_TEACHER_GRADES: (QuestionInput, ReferenceOutput),
 }

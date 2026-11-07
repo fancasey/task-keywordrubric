@@ -172,11 +172,11 @@ def test_invalid_rubrics_are_rejected(tmp_path):
     assert not verify_task("generate-rubric", request, output, reference, tmp_path)["valid"]
 
 
-def test_agent_has_no_grading_tool():
+def test_agent_has_grading_tool():
     from contract import TASKS, TOOLS, Task, Tool
     from plugin.__main__ import IMPLEMENTATIONS
 
-    assert {tool.value for tool in TOOLS} == {"get_question", "pin_teacher_grades"}
+    assert {tool.value for tool in TOOLS} == {"get_question", "pin_teacher_grades", "grade_answers"}
     assert set(IMPLEMENTATIONS) == set(Tool)
     assert TASKS[Task.GENERATE_RUBRIC] == (QuestionInput, RubricOutput)
 

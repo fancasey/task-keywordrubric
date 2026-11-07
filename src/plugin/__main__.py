@@ -13,6 +13,7 @@ from mcp.server.stdio import stdio_server
 from slimconfig import build_output, output_schema, plain_output
 
 from contract import TOOLS, Tool
+from plugin.grading import grade_answers
 from plugin.questions import get_question, pin_teacher_grades
 
 server = Server("keyword-rubric")
@@ -20,6 +21,7 @@ server = Server("keyword-rubric")
 WORKSPACE_ENV = "NANOAGENT_WORKSPACE"
 # Each tool's implementation: (its input, the workspace) -> its output, as contract.TOOLS types them.
 IMPLEMENTATIONS = {
+    Tool.GRADE_ANSWERS: grade_answers,
     Tool.GET_QUESTION: get_question,
     Tool.PIN_TEACHER_GRADES: pin_teacher_grades,
 }

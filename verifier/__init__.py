@@ -3,9 +3,10 @@
 from math import isfinite
 from statistics import mean
 
-from contract import Tool
+from contract import GradeAnswersInput, Tool
+from plugin.grading import grade_answers
 
-from .scoring import grade_answers, rubric_problem
+from .scoring import rubric_problem
 
 DIMENSION_IDS = ("D1", "D2", "D3", "D4", "D5")
 STUDENT_IDS = ("S1", "S2", "S3", "S4", "S5")
@@ -61,6 +62,9 @@ def verify_output(tool, input_value, output_value, workspace):
         problem = question_problem(output_value, input_value.question_id)
     elif tool is Tool.PIN_TEACHER_GRADES:
         problem = reference_problem(output_value, input_value.question_id)
+    elif tool is Tool.GRADE_ANSWERS:
+        expected = grade_answers(input_value, workspace)
+        problem = None if output_value == expected else "Grades do not match the supplied rubric"
     return result(not problem, problem or "Valid tool output")
 
 
@@ -74,7 +78,9 @@ def verify_task(task, arguments, output, reference, workspace):
         return result(False, problem)
     if output.question_id != arguments.question_id:
         return result(False, "The submission refers to a different question")
-    grades = grade_answers(reference.question, output.rubric)
+    grades = grade_answers(
+        GradeAnswersInput(output.question_id, output.rubric, reference.question.answers), workspace
+    ).grades
 
     means = teacher_means(reference)
     errors = {dimension: [] for dimension in DIMENSION_IDS}
