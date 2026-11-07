@@ -14,6 +14,10 @@ Generation favors a quick, reasonable first pass: usually 1–3 obvious alternat
 
 The keyword rubric can use different criteria from the teachers; only final scores are compared. Teacher means come from the mean-score workbook. The question workbook supplies the text, and the CSV is a dataset export with rounded scores.
 
+## Dataset citation
+
+Sheikh, J. K., & Soni, H. K. (2026). A benchmark dataset with human validation for AI-assisted technical answer evaluation. *Discover Education, 5*, 726. https://doi.org/10.1007/s44217-026-01975-z
+
 ## Phrase combinations
 
 Each alternative contains `all_of` (1–8 required phrases) and `none_of` (0–8 excluded phrases). Use an empty `none_of` list for a positive-only alternative. A group accepts any matching alternative and counts at most once.
