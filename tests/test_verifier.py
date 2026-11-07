@@ -81,3 +81,28 @@ def test_grading_task_rejects_invalid_inputs(tmp_path):
     assert not verify_task("grade-answers", request, output, None, tmp_path)["valid"]
     request = replace(request, rubric=rubric(), answers=[StudentAnswer("duplicate", "")] * 2)
     assert not verify_task("grade-answers", request, output, None, tmp_path)["valid"]
+
+
+@pytest.mark.parametrize("question_id", list(QuestionID))
+def test_student_lookup_tasks_and_grading_workflow(question_id, tmp_path):
+    from contract import StudentResponseInput
+    from plugin.questions import get_student_response, list_students
+
+    request = QuestionInput(question_id)
+    students = list_students(request, tmp_path)
+    assert verify_task("list-students", request, students, None, tmp_path)["valid"]
+    assert not verify_task(
+        "list-students", request, replace(students, student_ids=[]), None, tmp_path
+    )["valid"]
+    answers = []
+    for student_id in students.student_ids:
+        lookup = StudentResponseInput(question_id, student_id)
+        response = get_student_response(lookup, tmp_path)
+        assert verify_task("get-student-response", lookup, response, None, tmp_path)["valid"]
+        changed = replace(response, answer=replace(response.answer, text="changed response"))
+        assert not verify_task("get-student-response", lookup, changed, None, tmp_path)["valid"]
+        answers.append(response.answer)
+    grading = GradeAnswersInput(question_id, rubric(), answers)
+    output = grade_answers(grading, tmp_path)
+    assert verify_task("grade-answers", grading, output, None, tmp_path)["valid"]
+    assert [grade.student_id for grade in output.grades] == students.student_ids

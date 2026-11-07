@@ -4,7 +4,15 @@ from pathlib import Path
 from xml.etree import ElementTree
 from zipfile import ZipFile
 
-from contract import QuestionContextOutput, QuestionOutput, ReferenceOutput, StudentAnswer, TeacherGrade
+from contract import (
+    QuestionContextOutput,
+    QuestionOutput,
+    ReferenceOutput,
+    StudentAnswer,
+    StudentListOutput,
+    StudentResponseOutput,
+    TeacherGrade,
+)
 
 DATASET = Path(__file__).with_name("dataset")
 QUESTIONS = "ALL 4 Ques scores 5 Evaluators 5 students.xlsx"
@@ -65,3 +73,16 @@ def pin_teacher_grades(arguments, workspace):
         if cells[f"A{row}"] == arguments.question_id.value
     ]
     return ReferenceOutput(question, grades)
+
+
+def list_students(arguments, workspace):
+    question = load_question_with_answers(arguments.question_id)
+    return StudentListOutput(arguments.question_id, [answer.student_id for answer in question.answers])
+
+
+def get_student_response(arguments, workspace):
+    question = load_question_with_answers(arguments.question_id)
+    for answer in question.answers:
+        if answer.student_id == arguments.student_id:
+            return StudentResponseOutput(arguments.question_id, answer)
+    raise ValueError(f"Unknown student ID for {arguments.question_id.value}: {arguments.student_id}")

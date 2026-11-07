@@ -24,7 +24,7 @@ def test_real_mcp_question_tools_and_invalid_requests(tmp_path):
         async with stdio_client(parameters) as (read, write), ClientSession(read, write) as session:
             await session.initialize()
             listed = await session.list_tools()
-            assert {tool.name for tool in listed.tools} == {"get_question", "pin_teacher_grades", "grade_answers"}
+            assert {tool.name for tool in listed.tools} == {"get_question", "pin_teacher_grades", "grade_answers", "list_students", "get_student_response"}
             for question_id in QuestionID:
                 request = {"question_id": question_id.value}
                 public = await session.call_tool("get_question", request)
@@ -35,6 +35,18 @@ def test_real_mcp_question_tools_and_invalid_requests(tmp_path):
                 reference = private.structuredContent
                 assert len(reference["teacher_grades"]) == 25
                 assert len(reference["question"]["answers"]) == 5
+                students = await session.call_tool("list_students", request)
+                assert not students.isError
+                assert students.structuredContent == {
+                    "question_id": question_id.value,
+                    "student_ids": [answer["student_id"] for answer in reference["question"]["answers"]],
+                }
+                for answer in reference["question"]["answers"]:
+                    response = await session.call_tool(
+                        "get_student_response", {**request, "student_id": answer["student_id"]}
+                    )
+                    assert not response.isError
+                    assert response.structuredContent == {"question_id": question_id.value, "answer": answer}
                 assert {key: value for key, value in reference["question"].items() if key != "answers"} == (
                     public.structuredContent
                 )
@@ -60,6 +72,10 @@ def test_real_mcp_question_tools_and_invalid_requests(tmp_path):
                 assert rejected.isError
 
             for name, arguments in [
+                ("list_students", {"question_id": "NQ001"}),
+                ("get_student_response", {"question_id": "NQ007"}),
+                ("get_student_response", {"question_id": "NQ007", "student_id": "S999"}),
+                ("get_student_response", {"question_id": "NQ007", "student_id": ""}),
                 ("get_question", {}),
                 ("get_question", {"question_id": "NQ001"}),
                 ("get_question", {"question_id": None}),

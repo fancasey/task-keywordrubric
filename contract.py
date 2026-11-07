@@ -8,12 +8,16 @@ from slimconfig import Output
 
 
 class Tool(Enum):
+    LIST_STUDENTS = "list_students"
+    GET_STUDENT_RESPONSE = "get_student_response"
     GET_QUESTION = "get_question"
     GRADE_ANSWERS = "grade_answers"
     PIN_TEACHER_GRADES = "pin_teacher_grades"
 
 
 class Task(Enum):
+    LIST_STUDENTS = "list-students"
+    GET_STUDENT_RESPONSE = "get-student-response"
     GENERATE_RUBRIC = "generate-rubric"
     GRADE_ANSWERS = "grade-answers"
 
@@ -34,6 +38,23 @@ class QuestionInput(Output):
 class StudentAnswer(Output):
     student_id: str
     text: str
+
+
+@dataclass
+class StudentResponseInput(QuestionInput):
+    student_id: Annotated[str, "Student ID returned by list_students for this question"]
+
+
+@dataclass
+class StudentListOutput(Output):
+    question_id: QuestionID
+    student_ids: list[str]
+
+
+@dataclass
+class StudentResponseOutput(Output):
+    question_id: QuestionID
+    answer: StudentAnswer
 
 
 @dataclass
@@ -99,11 +120,15 @@ class ReferenceOutput(Output):
 
 
 TOOLS = {
+    Tool.LIST_STUDENTS: (QuestionInput, StudentListOutput),
+    Tool.GET_STUDENT_RESPONSE: (StudentResponseInput, StudentResponseOutput),
     Tool.GRADE_ANSWERS: (GradeAnswersInput, GradeAnswersOutput),
     Tool.GET_QUESTION: (QuestionInput, QuestionContextOutput),
     Tool.PIN_TEACHER_GRADES: (QuestionInput, ReferenceOutput),
 }
 TASKS = {
+    Task.LIST_STUDENTS: (QuestionInput, StudentListOutput),
+    Task.GET_STUDENT_RESPONSE: (StudentResponseInput, StudentResponseOutput),
     Task.GENERATE_RUBRIC: (QuestionInput, RubricOutput),
     Task.GRADE_ANSWERS: (GradeAnswersInput, GradeAnswersOutput),
 }

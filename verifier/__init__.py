@@ -4,6 +4,7 @@ from math import isfinite
 from statistics import mean
 
 from contract import GradeAnswersOutput, Task, Tool
+from plugin.questions import get_student_response, list_students
 
 from .scoring import grade_answers, rubric_problem, score_answers
 
@@ -53,7 +54,15 @@ def reference_problem(reference, question_id):
 
 def verify_output(tool, input_value, output_value, workspace):
     tool = Tool(tool)
-    if tool is Tool.GET_QUESTION:
+    if tool is Tool.LIST_STUDENTS:
+        problem = None if output_value == list_students(input_value, workspace) else "Student list does not match dataset"
+    elif tool is Tool.GET_STUDENT_RESPONSE:
+        try:
+            expected = get_student_response(input_value, workspace)
+            problem = None if output_value == expected else "Student response does not match dataset"
+        except ValueError as error:
+            problem = str(error)
+    elif tool is Tool.GET_QUESTION:
         problem = question_problem(output_value, input_value.question_id)
     elif tool is Tool.PIN_TEACHER_GRADES:
         problem = reference_problem(output_value, input_value.question_id)
@@ -72,6 +81,12 @@ def verify_output(tool, input_value, output_value, workspace):
 
 def verify_task(task, arguments, output, reference, workspace):
     task = Task(task)
+    lookup_tools = {
+        Task.LIST_STUDENTS: Tool.LIST_STUDENTS,
+        Task.GET_STUDENT_RESPONSE: Tool.GET_STUDENT_RESPONSE,
+    }
+    if task in lookup_tools:
+        return verify_output(lookup_tools[task], arguments, output, workspace)
     if task is Task.GRADE_ANSWERS:
         return verify_output(Tool.GRADE_ANSWERS, arguments, output, workspace)
     if reference is None:

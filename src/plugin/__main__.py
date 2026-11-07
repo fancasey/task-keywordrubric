@@ -14,13 +14,15 @@ from slimconfig import build_output, output_schema, plain_output
 
 from contract import TOOLS, Tool
 from plugin.grading import grade_answers
-from plugin.questions import get_question, pin_teacher_grades
+from plugin.questions import get_question, get_student_response, list_students, pin_teacher_grades
 
 server = Server("keyword-rubric")
 # NanoAgent names the one folder this plugin may write to.
 WORKSPACE_ENV = "NANOAGENT_WORKSPACE"
 # Each tool's implementation: (its input, the workspace) -> its output, as contract.TOOLS types them.
 IMPLEMENTATIONS = {
+    Tool.LIST_STUDENTS: list_students,
+    Tool.GET_STUDENT_RESPONSE: get_student_response,
     Tool.GRADE_ANSWERS: grade_answers,
     Tool.GET_QUESTION: get_question,
     Tool.PIN_TEACHER_GRADES: pin_teacher_grades,
